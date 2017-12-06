@@ -1,0 +1,118 @@
+html, body {
+    margin: 0 5%;
+}
+
+#Editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 750px;
+    width: 30%;
+    background-color: azure;
+
+    overflow-y: scroll;
+}
+
+#EditorMenu {
+    position: absolute;
+    top: 0;
+    left: 30%;
+    height: 750px;
+    width: 20%;
+    float: right;
+    padding: 0 20px;
+    background-color: aliceblue;
+}
+
+#NoteSpawn {
+}
+
+#NoteHighway {
+    width: 100%;
+    height: 100%;
+}
+
+#NoteContainer {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#HighwayBackground {
+    width: 90%;
+    display: inline-flex;
+    justify-content: space-between;
+    margin: 0 5%;
+}
+#HighwayMeasure {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 90%;
+    height: 100%;
+    display: inline-flex;
+    flex-direction: column;
+    align-content: space-between;
+    margin: 0 5%;
+}
+
+#HighwayBackground > li {
+    width: 20%;
+    margin: auto;
+    list-style: none;
+}
+
+#HighwayMeasure > li {
+    width: 100%;
+    height: 120px;
+    list-style: none;
+}
+
+.Measure {
+    position: relative;
+    top: 50%;
+    height: 2px;
+    width: 100%;
+    margin: auto;
+    background-color: darkgray;
+}
+
+.track {
+    width: 5px;
+    height: 100%;
+    background-color: gray;
+    margin: auto;
+}
+
+.NoteObject {
+    position: absolute !important;
+    margin: 5px;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 25px;
+    background-color: blue;
+}
+
+.selectedNote {
+    border: 3px red solid;
+}
+
+.Fourth {
+    height: 60px;
+    background-color: aquamarine;
+}
+.Eighth {
+    height: 40px;
+    background-color: darkturquoise;
+}
+.Sixteenth {
+    height: 20px;
+    background-color: navy;
+}
+.Action {
+    width: 100%;
+    height: 20px;
+    background-color: greenyellow;
+}
