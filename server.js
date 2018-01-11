@@ -6,10 +6,9 @@ var path = require('path')
 var stream = require('stream')
 var fs = require('fs')
 
-const jsonParser = bodyParser.json();
+const jsonParser = bodyParser.json({limit: '50mb', type: 'application/json'});
 
 const PORT = (process.env.PORT) ? process.env.PORT : 8080;
-
 app.use(express.static('public'))
 app.use(fileUpload())
 app.get('/', (req, res) => {
@@ -19,7 +18,7 @@ app.get('/', (req, res) => {
 app.post("/save", jsonParser, (req, res) => {
     if (!req.body) return res.sendStatus(400);
     console.log("Saving...");
-    var formattedContent = FormatClientToSys(req.body);
+    var formattedContent = FormatClientToSys(JSON.parse(JSON.stringify(req.body)));
     var fileContents = Buffer.from(JSON.stringify(formattedContent));
     var readStream = new stream.PassThrough();
     readStream.end(fileContents);
@@ -43,8 +42,8 @@ app.post('/upload', function(req, res) {
     file.mv(savedFilePath, function(err) {
         if (err)
           return res.status(500).send(err);
-     
-        res.send(formatted);
+        res.setHeader('Content-Type', 'application/json');
+        res.json(formatted);
     });
 });
 
@@ -64,16 +63,16 @@ app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
  */
 function FormatClientToSys(data) {
     const result = { notes: [] };
-    for (var i = data.length - 1; i >= 0; i--) {
+    for (var i = 0; i < data.length; i++) {
         var notes = data[i];
-        //console.log(notes);
         if (notes === undefined || notes === null) continue;
         var serializedSet = undefined;
+        var lastTrue = -1;
         for (var target = 0; target < notes.length; target++) {
             var note = notes[target];
             if (note) {
                 var serializedTarget = GetTargetFromIndex(target);
-                if (serializedSet !== undefined) {
+                if (lastTrue !== -1) {
                     var noteA = serializedSet;
                     serializedSet = {
                         "isDouble": true,
@@ -89,6 +88,7 @@ function FormatClientToSys(data) {
                         "noteType": "*sixteenth"
                     }
                 }
+                var lastTrue = target;
             }
         }
         if (serializedSet === undefined) {
@@ -116,26 +116,36 @@ function FormatClientToSys(data) {
  * @param {} data 
  */
 function FormatSysToClient(data) {
-    const result = []
+    const result = [];
+    console.log(data);
     for (var i = 0; i < data.notes.length; i++) {
         var note = data.notes[i];
-        // TODO: work on translating notes that are not *sixteenth
-        // var stringTarget = note.
+        var emptyBufferCount = 0;
         var serializedSet = [false, false, false, false, false];
         var isDouble = note.isDouble;
-        if (isDouble) {
-            targetA = GetIndexFromTarget(note.noteA.target);
-            targetB = GetIndexFromTarget(note.noteB.target);
+        if (isDouble !== undefined) {
+            var targetA = GetIndexFromTarget(note.noteA.target);
+            var targetB = GetIndexFromTarget(note.noteB.target);
             serializedSet[targetA] = true;
             serializedSet[targetB] = true;
         }
         else {
+            var stringType = note.noteType;
+            if (stringType === "*fourth") {
+                emptyBufferCount = 3;
+            } else if (stringType === "*eighth") {
+                emptyBufferCount = 1;
+            }
             var target = GetIndexFromTarget(note.target);
-            if (target !== -1) {
+            if (target !== -1 || note.noteType !== "*empty") {
                 serializedSet[target] = true;
             }
         }
         result.push(serializedSet);
+        // If we have non-sixteenth notes, push empty sets
+        while (emptyBufferCount > 0) {
+            result.push([false, false, false, false, false]);
+        }
     }
 
     return result;

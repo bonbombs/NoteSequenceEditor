@@ -1,23 +1,24 @@
 // Editor Constants
-var NOTES_PER_PAGE = 32;
-var MAX_PAGES = 10;
-var NOTE_WIDTH = 30;
-var NOTE_HEIGHT = 30;
-var MAX_CANVAS_SIZE = 20000;
+let NOTES_PER_PAGE = 32;
+const MAX_PAGES = 10;
+const NOTE_WIDTH = 30;
+const NOTE_HEIGHT = 30;
+const MAX_CANVAS_SIZE = 20000;
+const MAX_FILE_SIZE = 10; // MB
 
 // Note Editor canvas constants
 const DEFAULT_NOTE_COLOR = "DarkGray";
 const SELECTED_NOTE_COLOR = "DeepSkyBlue";
 
 // Setting variables
-var BPM = 240;
-var SongLength = 30;        // in seconds
-var Pages = [];
-var CURRENT_PAGE = 0;
+let BPM = 240;
+let SongLength = 30;        // in seconds
+let Pages = [];
+let CURRENT_PAGE = 0;
 
 // Canvas variables
-var canvas;
-var Stage;
+let canvas;
+let Stage;
 
 function init() {
     // Add util functions first
@@ -72,10 +73,14 @@ function init() {
 
     // Add handlers to buttons and user input listeners to UI
     $("#SaveJSON").click(saveJSON);
+    $("#LoadJSON").click(function() {
+        document.getElementById("uploadFile").click();
+    })
     $('#fileupload').fileupload({
         dataType: 'json',
+        maxChunkSize: MAX_FILE_SIZE * 1000000, // 10 MB
         done: loadJSON
-    });
+    })
     $('input').keypress(function (e) {
         // If 'Enter' key is pressed
         if (e.which == 13) {
@@ -152,14 +157,15 @@ function populate() {
         time.textAlign = "right";
         Stage.addChild(time);
 
-        if (Notes[(NOTES_PER_PAGE) - row] == undefined) {
-            Notes[(NOTES_PER_PAGE) - row] = [false, false, false, false, false];
+        if (Notes[row] == undefined) {
+            console.log("AAA");
+            Notes[row] = [false, false, false, false, false];
         }
 
         for (var col = 0; col < 5; col++) {
             var selectable = new createjs.Shape();
             var color = DEFAULT_NOTE_COLOR;
-            if (Notes[(NOTES_PER_PAGE) - row][col]) {
+            if (Notes[row][col]) {
                 color = SELECTED_NOTE_COLOR;
             }
             selectable.graphics.beginFill(color).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
@@ -208,30 +214,36 @@ function handleNoteClick(e) {
     if (e.target.selected) {
         e.target.selected = false;
         e.target.graphics.clear().beginFill(DEFAULT_NOTE_COLOR).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
-        Notes[(NOTES_PER_PAGE) - coord.row][coord.col] = false;
+        Notes[coord.row][coord.col] = false;
     }
     else {
         e.target.selected = true;
         e.target.graphics.clear().beginFill(SELECTED_NOTE_COLOR).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
-        Notes[(NOTES_PER_PAGE) - coord.row][coord.col] = true;
+        Notes[coord.row][coord.col] = true;
     }
     Stage.update();
 }
 
 // When user clicks on "Save JSON" button
 function saveJSON(e) {
-    var Notes = Pages[CURRENT_PAGE];
-    for (var row = Notes.length - 1; row >= 0; row--) {
-        console.log(Notes[row]);
-        if (Notes[row] === undefined || Notes[row] === null) {
-            Notes.splice(row, 1);
+    var notesToSave = [];
+    console.log(Pages);
+    for (var page = 0; page < Pages.length; page++) {
+        var notes = Pages[page];
+        if (notes === undefined) continue;
+        for (var row = notes.length - 1; row >= 0; row--) {
+            if (notes[row] === undefined || notes[row] === null) {
+                notes.splice(row, 1);
+            }
+            console.log(notes[row]);
+            notesToSave.push(notes[row]);
         }
     }
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "save", true);
     xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
     // send the collected data as JSON
-    xhr.send(JSON.stringify(Notes));
+    xhr.send(JSON.stringify(notesToSave));
     // on receive, get the response data and download it
     // see: http://www.alexhadik.com/blog/2016/7/7/l8ztp8kr5lbctf5qns4l8t3646npqh 
     xhr.onloadend = function (e) {
@@ -251,7 +263,36 @@ function saveJSON(e) {
 
 // When user clicks on "Load JSON" button
 function loadJSON(e, data) {
-    console.log(data.result);
+    console.log("Load complete!");
+    console.log(data)
+    const noteData = JSON.parse(data.jqXHR.responseText);
+    console.log(noteData)
+    // Data will come in one giant array. We need to split it up into pages
+    // Clear existing page data
+    var currentPage = 0;
+    Pages = [];
+    Pages[currentPage] = [];
+    // Running data set backwards so first notes are last
+    for (var setIdx = 0; setIdx < noteData.length; setIdx++) {
+        currentPage = Math.floor((setIdx) / NOTES_PER_PAGE);
+        if (Pages[currentPage] === undefined) { 
+            Pages[currentPage] = [];
+        }
+        Pages[currentPage].push(noteData[setIdx]);
+    }
+    CURRENT_PAGE = 0;
+    console.log(Pages);
+    if (Pages.length > 1) {
+        var counter = Pages.length - 1;
+        while (counter > 0) {
+            var button = $("<div></div>").addClass("pageButton");
+            button.text((Pages.length).toString());
+            button.insertBefore("#AddPage");
+            button.on("click", handlePageClick);
+            counter--;
+        }
+    }
+    populate();
 }
 
 // Add util functions if they're not supported by browser yet
