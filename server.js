@@ -119,6 +119,8 @@ function FormatSysToClient(data) {
     const result = []
     for (var i = 0; i < data.notes.length; i++) {
         var note = data.notes[i];
+        // TODO: work on translating notes that are not *sixteenth
+        // var stringTarget = note.
         var serializedSet = [false, false, false, false, false];
         var isDouble = note.isDouble;
         if (isDouble) {
