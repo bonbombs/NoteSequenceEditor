@@ -1,0 +1,69 @@
+<html>
+    <head>
+        <title>DOLDRUM Note Editor</title>
+        <link type="text/css" href="css/custom-theme/jquery-ui-1.9.2.custom.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+        <link type="text/css" href="dist/jquery.contextMenu.min.css" rel="stylesheet"/>
+        <link type="text/css" href="css/style.css" rel="stylesheet" />
+    </head>
+    <body onload="init();">
+        <div id="app">
+            <div id="Editor">
+                <canvas width="500" height="1000" id="InteractiveEditor"></canvas>
+            </div>
+            <div id="EditorFooter">
+                <div class="targetIndicator">Left</div>
+                <div class="targetIndicator">Left Cymbal</div>
+                <div class="targetIndicator">Center</div>
+                <div class="targetIndicator">Right Cymbal</div>
+                <div class="targetIndicator">Right</div>
+            </div>
+            <div class="container" id="EditorMenu">
+                <h2>DOLDRUM Note Editor</h2>
+                <div class="row">
+                    <span id="prop_Message"></span>
+                </div>
+                <div class="row">
+                    <div class="button col-sm" id="LoadJSON">Load JSON</div>
+                    <div class="button col-sm" id="SaveJSON">Save JSON</div>
+                </div>
+                <hr/>
+                <h6>Total Song Length: <span id="prop_SongLength">0</span></h6>
+                <hr/>
+                <h4>Settings:</h4>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="input-group editorInput">
+                            <span class="input-group-addon">Length:</span>
+                            <input type="text" class="form-control" id="input_LengthPerPage">
+                            <span class="input-group-addon">seconds</span>
+                        </div>            
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-8">
+                        <div class="input-group editorInput">
+                            <span class="input-group-addon">BPM:</span>
+                            <input type="text" class="form-control" id="input_BPMCount">
+                        </div>
+                    </div>
+                </div>
+                <hr/>
+                <h5>Pages:</h5>
+                <div id="NotePager">
+                    <div class="pageButton" id="AddPage">+</div>
+                </div>
+            </div>
+        </div>
+        <script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+        <script src="dist/jquery.contextMenu.min.js"></script>
+        <script src="dist/jquery.ui.position.min.js"></script>
+        <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+        <script type="text/javascript" src="js/main.js"></script>
+    </body>
+</html>

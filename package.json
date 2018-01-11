@@ -2,10 +2,14 @@
   "name": "noteeditor",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "kelly zhang",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "jquery-contextmenu": "^3.0.0-beta.1"
+  }
 }

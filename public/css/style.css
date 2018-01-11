@@ -1,0 +1,170 @@
+body {
+    background-color: rgb(32, 31, 37);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: rgb(216, 216, 216);
+}
+
+#app {
+    position: relative;
+    margin: 1% auto;
+    width: 550px;
+    height: 95%;
+}
+
+#Editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 87%;
+    width: 50%;
+    background-color: rgb(49, 46, 66);
+    padding: 10px 0;
+    overflow-y: scroll;
+}
+
+#EditorFooter {
+    position: absolute;
+    top: 87%;
+    left: 0;
+    height: 13%;
+    width: 50%;
+    background-color: rgb(49, 46, 66);
+    padding-top: 10px;
+    padding-left: 75px;
+}
+
+.targetIndicator {
+    color: rgb(211, 211, 211);
+    font-size: 14px;
+    width: 30px;
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+    text-align: left;
+    transform: rotate(90deg);
+    white-space: nowrap;
+}
+
+#EditorMenu {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+    width: 50%;
+    float: right;
+    padding: 0 20px;
+    background-color: rgb(49, 46, 66);
+}
+
+/* width */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    background: #493149; 
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: #800080; 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: plum; 
+}
+
+#NotePager {
+    display: inline-flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+#AddPage {
+    background-color: #493149;    
+    font-size: 20px;
+}
+
+.pageButton {
+    cursor: pointer;
+    margin: 5px;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+    color: white;
+    background-color: #800080;
+}
+
+.pageButton.active {
+    border: 2px plum solid;
+}
+
+.pageButton:hover {
+    background-color: plum;
+}
+
+.button.zoom {
+    width: 40px;
+    height: 40px;
+}
+
+/** OVERRIDE STYLES **/
+/*********************/
+.button {
+    cursor: pointer;
+    margin: 5px;
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+    color: white;
+    background-color: #493149;    
+}
+
+.button:hover {
+    background-color: plum;
+}
+
+.editorInput > input {
+    box-shadow: none;
+}
+
+.editorInput > input:active {
+    background: initial;
+    background-color: transparent;
+    transition: none;
+}
+
+.editorInput > input[type="text"] {
+    border: none;
+}
+
+.editorInput > .form-control {
+    background: initial;
+    background-color: transparent;
+    transition: none;
+    color: plum;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+.editorInput > .form-control:active {
+    background: initial;
+    background-color: transparent;
+    transition: none;
+}
+
+.input-group.editorInput .form-control {
+    border-bottom: 5px #800080 solid;
+}
+
+.editorInput > .input-group-addon {
+    background: initial;
+    background-color: transparent;
+    border: none;
+    color: aliceblue;
+}
