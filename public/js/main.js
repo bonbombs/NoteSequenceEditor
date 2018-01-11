@@ -1,23 +1,29 @@
+// Editor Constants
 var NOTES_PER_PAGE = 32;
 var MAX_PAGES = 10;
 var NOTE_WIDTH = 30;
 var NOTE_HEIGHT = 30;
 var MAX_CANVAS_SIZE = 20000;
 
-// Note Edtior canvas constants
+// Note Editor canvas constants
 const DEFAULT_NOTE_COLOR = "DarkGray";
 const SELECTED_NOTE_COLOR = "DeepSkyBlue";
 
-var BPM = 120;
+// Setting variables
+var BPM = 240;
 var SongLength = 30;        // in seconds
 var Pages = [];
 var CURRENT_PAGE = 0;
+
+// Canvas variables
 var canvas;
 var Stage;
 
 function init() {
+    // Add util functions first
     polyfill();
 
+    // Update UI with default values
     $("#input_BPMCount").val(BPM);
     $("#input_LengthPerPage").val(SongLength);
     NOTES_PER_PAGE = (BPM) * (SongLength / 60) * 4;
@@ -25,6 +31,7 @@ function init() {
     Pages[CURRENT_PAGE] = [];
     updateUI();
 
+    // Check if we can use canvas...
     if(!(!!document.createElement("canvas").getContext))
     {
         var wrapper = document.getElementById("canvasWrapper");
@@ -32,6 +39,8 @@ function init() {
         "the HTML5 Canvas element";
         return;
     }
+
+    // Setup canvas
     var canvasContainer = document.getElementById("Editor");
     canvas = document.getElementById("InteractiveEditor");
     canvas.width = canvasContainer.clientWidth;
@@ -50,6 +59,7 @@ function init() {
         }
     });
 
+    // Set up note pages
     $("#AddPage").on("click", handleAddPage);
     var button = $("<div></div>").addClass("pageButton");
     button.text((1).toString());
@@ -57,27 +67,39 @@ function init() {
     button.on("click", handlePageClick);
     button.addClass("active");
     
+    // Draw the note editor in canvas
     populate();
 
+    // Add handlers to buttons and user input listeners to UI
     $("#SaveJSON").click(saveJSON);
+    $('#fileupload').fileupload({
+        dataType: 'json',
+        done: loadJSON
+    });
     $('input').keypress(function (e) {
+        // If 'Enter' key is pressed
         if (e.which == 13) {
           updateParams();
           return false;
         }
-      });
-
+    });
+    
+    // Set the default view of editor to the very bottom
     canvasContainer.scrollTo(0, canvasContainer.scrollHeight);
 }
 
 function updateParams() {
+    // Update internal variables with newly inputted values
     BPM = $("#input_BPMCount").val();
     SongLength = $("#input_LengthPerPage").val();
     NOTES_PER_PAGE = (BPM / 60) * (SongLength) * 4;
     NOTES_PER_PAGE = Math.ceil(NOTES_PER_PAGE);
+    // Update note editor view
     populate();
     var canvasContainer = document.getElementById("Editor");
+    // Scroll all the way down again
     canvasContainer.scrollTo(0, canvasContainer.scrollHeight);
+    // Update UI with new info
     updateUI();
 }
 
@@ -98,7 +120,7 @@ function populate() {
     var bps = BPM / 60; // Beats per second
     var spb = 1 / bps;  // Seconds per beat
     var Notes = Pages[CURRENT_PAGE];
-    // Render 4/4 measures
+    // Render 4/4 measures in 16th note granularity
     let NOTES_PER_MEASURE = 16;
     for (var timeSegm = 0; timeSegm < NOTES_PER_PAGE / NOTES_PER_MEASURE; timeSegm++) {
         var segment = new createjs.Shape();
@@ -152,6 +174,7 @@ function populate() {
     Stage.update();
 }
 
+// When user clicks on an add page button
 function handleAddPage() {
     Pages[Pages.length] = [];
     console.log(Pages);
@@ -163,6 +186,7 @@ function handleAddPage() {
     updateUI();
 }
 
+// When user clicks on a page button
 function handlePageClick(e) {
     $(".pageButton.active").removeClass("active");
     $(this).addClass("active");
@@ -170,10 +194,12 @@ function handlePageClick(e) {
     populate();
 }
 
+// When user clicks on a button from the right-click menu
 function handlePageContextClick(key, options) {
 
 }
 
+// When user clicks on a note box in the editor
 function handleNoteClick(e) {
     var coord = e.target.coord;
     var x = e.target.x;
@@ -192,10 +218,14 @@ function handleNoteClick(e) {
     Stage.update();
 }
 
+// When user clicks on "Save JSON" button
 function saveJSON(e) {
     var Notes = Pages[CURRENT_PAGE];
     for (var row = Notes.length - 1; row >= 0; row--) {
         console.log(Notes[row]);
+        if (Notes[row] === undefined || Notes[row] === null) {
+            Notes.splice(row, 1);
+        }
     }
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "save", true);
@@ -219,14 +249,12 @@ function saveJSON(e) {
     };
 }
 
-function loadJSON() {
-    
+// When user clicks on "Load JSON" button
+function loadJSON(e, data) {
+    console.log(data.result);
 }
 
-function serialize() {
-
-}
-
+// Add util functions if they're not supported by browser yet
 function polyfill() {
     // https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
