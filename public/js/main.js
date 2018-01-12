@@ -372,15 +372,18 @@ function saveJSON(e) {
 
 // When user clicks on "Load JSON" button
 function loadJSON(e, data) {
-    Log(LOG_SUCCESS, `Load complete!`);
     const noteData = JSON.parse(data.jqXHR.responseText);
     // Data will come in one giant array. We need to split it up into pages
     // Clear existing page data
     var currentPage = 0;
     Pages = [];
     Pages[currentPage] = [];
+    $(".pageButton").each(function (i, el) {
+        if ($(el).attr("id") == "AddPage") return;
+        $(el).remove();
+    })
     // Running data set backwards so first notes are last
-    for (var setIdx = 0; setIdx < noteData.length; setIdx++) {
+    for (var setIdx = noteData.length - 1; setIdx >= 0; setIdx--) {
         currentPage = Math.floor((setIdx) / NOTES_PER_PAGE);
         if (Pages[currentPage] === undefined) { 
             Pages[currentPage] = [];
@@ -389,16 +392,22 @@ function loadJSON(e, data) {
     }
     CURRENT_PAGE = 0;
     if (Pages.length > 1) {
-        var counter = Pages.length - 1;
+        var counter = Pages.length;
         while (counter > 0) {
             var button = $("<div></div>").addClass("pageButton");
-            button.text((Pages.length).toString());
+            button.text((Pages.length - counter + 1).toString());
             button.insertBefore("#AddPage");
             button.on("click", handlePageClick);
             counter--;
         }
     }
+    $(".pageButton.active").removeClass("active");
+    var el = $(".pageButton").get(CURRENT_PAGE);
+    $(el).addClass("active");
+
     populate();
+    updateUI();
+    Log(LOG_SUCCESS, `Load complete!`);
 }
 
 // Add util functions if they're not supported by browser yet
