@@ -6,50 +6,59 @@ var path = require('path')
 var stream = require('stream')
 var fs = require('fs')
 
+// Define middleware for Express
 const jsonParser = bodyParser.json({limit: '50mb', type: 'application/json'});
 
+// Define port number to host server on. Use ENV defined PORT if that exists 
+//                                       (For instances like Heroku)
 const PORT = (process.env.PORT) ? process.env.PORT : 8080;
-<<<<<<< HEAD
 
-// Load 
-=======
->>>>>>> 5b8f40281b5c18cbc6a3158761b368baf324fd66
+// Load middlewares and configure express router
 app.use(express.static('public'))
 app.use(fileUpload())
 
 /**  Server Router Handlers go below **/
 
+// Default route to index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname + '/public/index.html'));
 });
 
 app.post("/save", jsonParser, (req, res) => {
     if (!req.body) return res.sendStatus(400);
+
     console.log("Saving...");
+    // Convert format received from client into format that game system will read in
     var formattedContent = FormatClientToSys(JSON.parse(JSON.stringify(req.body)));
+    // Add string formatted content into buffer to pipe into a file
     var fileContents = Buffer.from(JSON.stringify(formattedContent));
     var readStream = new stream.PassThrough();
     readStream.end(fileContents);
     var fileName = "sequence.json";
-    console.log("DONE")
     var savedFilePath = path.join(__dirname + '/saved/' + fileName);
+    // Write the file and send it back to the client
     fs.writeFile(savedFilePath, fileContents, function() {
+        console.log("DONE")
         res.status(200).download(savedFilePath, fileName);
     });
 });
 
 app.post('/upload', function(req, res) {
-    if (!req.files)
-        return res.status(400).send('No files were uploaded.');
-
+    if (!req.files) return res.status(400).send('No files were uploaded.');
+    // Grab uploaded file
     let file = req.files.noteSequence;
+    // Get file's data (in Buffer type) and convert to string to parse into JSON
     let json = JSON.parse(file.data.toString('utf8'))
+    // Format file contents into client readable format
     var formatted = FormatSysToClient(json);
+
     var fileName = "sequence.json";
     var savedFilePath = path.join(__dirname + '/saved/' + fileName);
+    // Save/Overwrite/Move to server locally
     file.mv(savedFilePath, function(err) {
-        if (err)
-          return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
+
+        // Send formatted data back to client
         res.setHeader('Content-Type', 'application/json');
         res.json(formatted);
     });

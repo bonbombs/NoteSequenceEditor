@@ -1,14 +1,24 @@
 // Editor Constants
 let NOTES_PER_PAGE = 32;
-const MAX_PAGES = 10;
+const MAX_PAGES = 15;
 const NOTE_WIDTH = 30;
 const NOTE_HEIGHT = 30;
 const MAX_CANVAS_SIZE = 20000;
 const MAX_FILE_SIZE = 10; // MB
 
+const LOG_LOG = 0;
+const LOG_WARNING = 1;
+const LOG_ERROR = 2;
+const LOG_SUCCESS = 3;
+
 // Note Editor canvas constants
 const DEFAULT_NOTE_COLOR = "DarkGray";
 const SELECTED_NOTE_COLOR = "DeepSkyBlue";
+const LOG_COLOR = "White";
+const WARNING_COLOR = "Goldenrod";
+const ERROR_COLOR = "Red";
+const SUCCESS_COLOR = "Green";
+
 
 // Setting variables
 let BPM = 240;
@@ -20,9 +30,16 @@ let CURRENT_PAGE = 0;
 let canvas;
 let Stage;
 
+let MessageLog;
+
+let clipboard;
+
 function init() {
     // Add util functions first
     polyfill();
+
+    // Init Message Log
+    MessageLog = $("#MessageLog");
 
     // Update UI with default values
     $("#input_BPMCount").val(BPM);
@@ -91,9 +108,12 @@ function init() {
     
     // Set the default view of editor to the very bottom
     canvasContainer.scrollTo(0, canvasContainer.scrollHeight);
+
+    Log(LOG_LOG, "Editor Initialized!");
 }
 
 function updateParams() {
+    Log(LOG_LOG, "Updating Editor parameters");
     // Update internal variables with newly inputted values
     BPM = $("#input_BPMCount").val();
     SongLength = $("#input_LengthPerPage").val();
@@ -158,7 +178,6 @@ function populate() {
         Stage.addChild(time);
 
         if (Notes[row] == undefined) {
-            console.log("AAA");
             Notes[row] = [false, false, false, false, false];
         }
 
@@ -182,8 +201,11 @@ function populate() {
 
 // When user clicks on an add page button
 function handleAddPage() {
+    if (Pages.length >= MAX_PAGES) {
+        Log(LOG_WARNING, `Unable to add page. Exceeds maximum page count (${MAX_PAGES})`);
+        return;
+    }
     Pages[Pages.length] = [];
-    console.log(Pages);
     var button = $("<div></div>").addClass("pageButton");
     button.text((Pages.length).toString());
     button.insertBefore("#AddPage");
@@ -201,8 +223,60 @@ function handlePageClick(e) {
 }
 
 // When user clicks on a button from the right-click menu
-function handlePageContextClick(key, options) {
+function handlePageContextClick(options, key, root) {
+    var pageVal = root.$trigger.text();
+    var page = parseInt(pageVal) - 1;
+    switch (key) {
+        case "copy":
+            Log(LOG_LOG, `Copying contents of page ${pageVal}`);
+            clipboard = Pages[page];
+            break;
+        case "paste":
+            Log(LOG_LOG, `Pasting contents to page ${pageVal}`);
+            if (clipboard === undefined) {
+                Log(LOG_ERROR, `There is nothing to be pasted!`);
+            }
+            else {
+                Pages[page] = clipboard;
+                populate();
+            }
+            break;
+        case "clear":
+            Log(LOG_LOG, `Clearing contents of page ${pageVal}`);
+            Pages[page] = [];
+            // Update if we're viewing the current page
+            if (page === CURRENT_PAGE)
+                populate();
+            break;
+        case "delete":
+            if (Pages.length === 1) {
+                Log(LOG_ERROR, `Unable to delete page 1. Clear the page instead.`);
+                return;
+            }
+            Log(LOG_LOG, `Deleting page ${pageVal}`);
+            Pages.splice(page, 1);
+            
+            $(".pageButton").each(function (i, el) {
+                if ($(el).attr("id") == "AddPage") return;
+                $(el).remove();
+            })
+            var counter = 0;
+            while (counter < Pages.length) {
+                var button = $("<div></div>").addClass("pageButton");
+                button.text(counter + 1);
+                button.insertBefore("#AddPage");
+                button.on("click", handlePageClick);
+                counter++;
+            }
 
+            // Select the first page
+            CURRENT_PAGE = 0;
+            $(".pageButton.active").removeClass("active");
+            var el = $(".pageButton").get(CURRENT_PAGE);
+            $(el).addClass("active");
+            populate();
+            break;
+    }
 }
 
 // When user clicks on a note box in the editor
@@ -226,6 +300,7 @@ function handleNoteClick(e) {
 
 // When user clicks on "Save JSON" button
 function saveJSON(e) {
+    Log(LOG_LOG, `Saving ${Pages.length} page(s) to JSON`);
     var notesToSave = [];
     console.log(Pages);
     for (var page = 0; page < Pages.length; page++) {
@@ -257,6 +332,9 @@ function saveJSON(e) {
             a.download = 'sequence.json';
             a.click();
             window.URL.revokeObjectURL(url);
+            Log(LOG_SUCCESS, `Save complete!`);
+        } else {
+            Log(LOG_ERROR, `Error occurred while saving! Status: ${ this.status }`);
         }
     };
 }
@@ -315,4 +393,26 @@ function polyfill() {
             }
         };
     }
+}
+
+function Log(logType, logMessage) {
+    const Log = $("<div></div>");
+    let color;
+    Log.text("> " + logMessage);
+    switch (logType) {
+        case LOG_LOG:
+            color = LOG_COLOR;
+            break;
+        case LOG_WARNING:
+            color = WARNING_COLOR;
+            break;
+        case LOG_ERROR:
+            color = ERROR_COLOR;
+            break;
+        case LOG_SUCCESS:
+            color = SUCCESS_COLOR;
+            break;
+    }
+    Log.css("color", color);
+    MessageLog.prepend(Log);
 }

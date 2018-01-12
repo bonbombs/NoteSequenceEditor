@@ -113,6 +113,22 @@ h1, h2, h3, h4, h5, h6 {
     height: 40px;
 }
 
+.tinyText {
+    color: rgb(204, 204, 204);
+    font-size: 0.65em;
+}
+
+#MessageLog {
+    position: absolute;
+    background-color: black;
+    overflow-y: scroll;
+    width: 300px;
+    height: 300px;
+    right: -60%;
+
+    font-family: Consolas,monaco,monospace; 
+}
+
 /** OVERRIDE STYLES **/
 /*********************/
 .button {
