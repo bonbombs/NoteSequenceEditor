@@ -5,6 +5,8 @@ const NOTE_WIDTH = 30;
 const NOTE_HEIGHT = 30;
 const MAX_CANVAS_SIZE = 20000;
 const MAX_FILE_SIZE = 10; // MB
+const MAX_BPM = 300;
+const MAX_SONG_LEN = 30;
 
 const LOG_LOG = 0;
 const LOG_WARNING = 1;
@@ -64,6 +66,7 @@ function init() {
     canvas.width = canvasContainer.clientWidth;
     canvas.height = canvasContainer.height;
     Stage = new createjs.Stage(canvas);
+    
 
     // Setup context menu
     $.contextMenu({
@@ -115,10 +118,34 @@ function init() {
 function updateParams() {
     Log(LOG_LOG, "Updating Editor parameters");
     // Update internal variables with newly inputted values
-    BPM = $("#input_BPMCount").val();
-    SongLength = $("#input_LengthPerPage").val();
+    BPM = parseInt($("#input_BPMCount").val());
+    SongLength = parseInt($("#input_LengthPerPage").val());
+
+    if (BPM > MAX_BPM) {
+        Log(LOG_WARNING, `Input BPM (${BPM}) exceeds maximum BPM (${MAX_BPM})`);
+        BPM = MAX_BPM;
+        $("#input_BPMCount").val(BPM);
+    }
+    else if (BPM <= 0) {
+        Log(LOG_ERROR, `BPM must be greater than 0. Setting to default value.`);
+        BPM = 240;
+        $("#input_BPMCount").val(BPM);
+    }
+
+    if (SongLength > MAX_SONG_LEN) {
+        Log(LOG_WARNING, `Length (${SongLength  }) exceeds maximum length (${MAX_SONG_LEN})`);
+        SongLength = MAX_SONG_LEN;
+        $("#input_LengthPerPage").val(SongLength);
+    }
+    else if (SongLength <= 0) {
+        Log(LOG_ERROR, `Length must be greater than 0. Setting to default value.`);
+        SongLength = 30;
+        $("#input_LengthPerPage").val(SongLength);
+    }
+
     NOTES_PER_PAGE = (BPM / 60) * (SongLength) * 4;
     NOTES_PER_PAGE = Math.ceil(NOTES_PER_PAGE);
+    console.log(NOTES_PER_PAGE);
     // Update note editor view
     populate();
     var canvasContainer = document.getElementById("Editor");
@@ -147,15 +174,17 @@ function populate() {
     var Notes = Pages[CURRENT_PAGE];
     // Render 4/4 measures in 16th note granularity
     let NOTES_PER_MEASURE = 16;
-    for (var timeSegm = 0; timeSegm < NOTES_PER_PAGE / NOTES_PER_MEASURE; timeSegm++) {
+    for (var timeSegm = (NOTES_PER_PAGE / NOTES_PER_MEASURE) - 1; timeSegm >= 0 ; timeSegm--) {
         var segment = new createjs.Shape();
         segment.graphics.beginFill("Purple").drawRect(0, 0, NOTE_WIDTH / 2, (NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1)));
         segment.x = 50;
         segment.y = (timeSegm * ((NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1))) + timeSegm * 5);
         if (segment.y + ((NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1))) > canvas.height) {
             canvas.height = segment.y + (NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1));
+            console.log(canvas.height);
         }
         Stage.addChild(segment);
+        segment.snapToPixel = true;
     }
     // Render time labels & notes
     for (var row = 0; row < NOTES_PER_PAGE; row++) {
@@ -176,6 +205,7 @@ function populate() {
         time.y = (row * NOTE_HEIGHT + row * 5);
         time.textAlign = "right";
         Stage.addChild(time);
+        time.snapToPixel = true;
 
         if (Notes[row] == undefined) {
             Notes[row] = [false, false, false, false, false];
@@ -194,6 +224,7 @@ function populate() {
             selectable.selected = false;
             selectable.addEventListener("click", handleNoteClick);
             Stage.addChild(selectable);
+            selectable.snapToPixel = true;
         }
     }
     Stage.update();
@@ -341,10 +372,8 @@ function saveJSON(e) {
 
 // When user clicks on "Load JSON" button
 function loadJSON(e, data) {
-    console.log("Load complete!");
-    console.log(data)
+    Log(LOG_SUCCESS, `Load complete!`);
     const noteData = JSON.parse(data.jqXHR.responseText);
-    console.log(noteData)
     // Data will come in one giant array. We need to split it up into pages
     // Clear existing page data
     var currentPage = 0;
@@ -359,7 +388,6 @@ function loadJSON(e, data) {
         Pages[currentPage].push(noteData[setIdx]);
     }
     CURRENT_PAGE = 0;
-    console.log(Pages);
     if (Pages.length > 1) {
         var counter = Pages.length - 1;
         while (counter > 0) {
