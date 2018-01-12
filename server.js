@@ -10,8 +10,12 @@ const jsonParser = bodyParser.json();
 
 const PORT = (process.env.PORT) ? process.env.PORT : 8080;
 
+// Load 
 app.use(express.static('public'))
 app.use(fileUpload())
+
+/**  Server Router Handlers go below **/
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname + '/public/index.html'));
 });
@@ -48,7 +52,11 @@ app.post('/upload', function(req, res) {
     });
 });
 
+// Start server
+
 app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
+
+/// Helper functions 
 
 /**
  * Formats the notes from
