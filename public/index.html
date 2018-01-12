@@ -25,8 +25,9 @@
                 </div>
                 <div class="row">
                     <form id="fileupload" action="/upload" method="POST">
-                        <input type="file" name="noteSequence">
+                        <input type="file" id="uploadFile" accept=".json" name="noteSequence">
                     </form>
+                    <div class="button col-sm" id="LoadJSON">Load JSON</div>
                     <div class="button col-sm" id="SaveJSON">Save JSON</div>
                 </div>
                 <hr/>
