@@ -5,6 +5,12 @@ const bodyParser = require('body-parser')
 var path = require('path')
 var stream = require('stream')
 var fs = require('fs')
+const MidiConvert = require('./MidiConvert');
+
+const EMPTY = 0;
+const SIXTEENTH = 1;
+const EIGHTH = 2;
+const FOURTH = 4;
 
 // Define middleware for Express
 const jsonParser = bodyParser.json({limit: '50mb', type: 'application/json'});
@@ -64,6 +70,34 @@ app.post('/upload', function(req, res) {
     });
 });
 
+app.post('/uploadMIDI', function(req, res) {
+    if (!req.files) return res.status(400).send('No files were uploaded.');
+    // Grab uploaded file
+    let file = req.files.midi;
+    let arrBuff = toArrayBuffer(file.data);
+    console.log(arrBuff instanceof ArrayBuffer)
+    var midi = MidiConvert.parse(arrBuff);
+    console.log(midi);
+    //console.log(MidiConvert);
+    // Get file's data (in Buffer type) and convert to string to parse into JSON
+    //let json = JSON.parse(file.data.toString('utf8'))
+
+    // Format file contents into client readable format
+    // var formatted = FormatSysToClient(json);
+
+    var fileName = "midi.mid";
+    var savedFilePath = path.join(__dirname + '/saved/' + fileName);
+    // Save/Overwrite/Move to server locally
+    file.mv(savedFilePath, function(err) {
+        if (err) return res.status(500).send(err);
+
+        // Send formatted data back to client
+        res.setHeader('Content-Type', 'application/json');
+        //res.send(file.data.toString('utf8'))
+        res.json(midi);
+    });
+});
+
 // Start server
 
 app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
@@ -93,6 +127,7 @@ function FormatClientToSys(data) {
             var note = notes[target];
             if (note) {
                 var serializedTarget = GetTargetFromIndex(target);
+                var type = GetTypeFromNote(note);
                 if (lastTrue !== -1) {
                     var noteA = serializedSet;
                     serializedSet = {
@@ -100,13 +135,13 @@ function FormatClientToSys(data) {
                         "noteA": noteA,
                         "noteB": {
                             "target": serializedTarget,
-                            "noteType": "*sixteenth"
+                            "noteType": type
                         }
                     }
                 } else {
                     serializedSet = {
                         "target": serializedTarget,
-                        "noteType": "*sixteenth"
+                        "noteType": type
                     }
                 }
                 var lastTrue = target;
@@ -142,30 +177,32 @@ function FormatSysToClient(data) {
     for (var i = 0; i < data.notes.length; i++) {
         var note = data.notes[i];
         var emptyBufferCount = 0;
-        var serializedSet = [false, false, false, false, false];
+        var serializedSet = [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY];
         var isDouble = note.isDouble;
         if (isDouble !== undefined) {
             var targetA = GetIndexFromTarget(note.noteA.target);
             var targetB = GetIndexFromTarget(note.noteB.target);
-            serializedSet[targetA] = true;
-            serializedSet[targetB] = true;
+            serializedSet[targetA] = GetNoteFromType(note.noteA.noteType);
+            serializedSet[targetB] = GetNoteFromType(note.noteB.noteType);
         }
         else {
-            var stringType = note.noteType;
-            if (stringType === "*fourth") {
+            var noteType = GetNoteFromType(note.noteType);
+            if (noteType === FOURTH) {
                 emptyBufferCount = 3;
-            } else if (stringType === "*eighth") {
+            } else if (noteType === EIGHTH) {
                 emptyBufferCount = 1;
             }
             var target = GetIndexFromTarget(note.target);
-            if (target !== -1 || note.noteType !== "*empty") {
-                serializedSet[target] = true;
+            
+            if (target !== -1 || noteType !== EMPTY) {
+                serializedSet[target] = noteType;
             }
         }
         result.push(serializedSet);
         // If we have non-sixteenth notes, push empty sets
-        while (emptyBufferCount > 0) {
-            result.push([false, false, false, false, false]);
+        while (emptyBufferCount > 0 && i == data.notes.length - 1) {
+            emptyBufferCount--;
+            result.push([EMPTY, EMPTY, EMPTY, EMPTY, EMPTY]);
         }
     }
 
@@ -204,4 +241,41 @@ function GetTargetFromIndex(targetIndex) {
         default:
             return "none";
     }
+}
+
+function GetTypeFromNote(note) {
+    switch (note) {
+        case EMPTY:
+            return "*empty";
+        case SIXTEENTH:
+            return "*sixteenth";
+        case EIGHTH:
+            return "*eighth";
+        case FOURTH:
+            return "*fourth";
+        default:
+            return "*empty";
+    }
+}
+
+function GetNoteFromType(note) {
+    switch (note) {
+        case "*sixteenth":
+            return SIXTEENTH;
+        case "*eighth":
+            return EIGHTH;
+        case "*fourth":
+            return FOURTH;
+        default:
+            return EMPTY;
+    }
+}
+
+function toArrayBuffer(buf) {
+    var ab = new ArrayBuffer(buf.length);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; ++i) {
+        view[i] = buf[i];
+    }
+    return ab;
 }

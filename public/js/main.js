@@ -21,9 +21,13 @@ const WARNING_COLOR = "Goldenrod";
 const ERROR_COLOR = "Red";
 const SUCCESS_COLOR = "Green";
 
+const EMPTY = 0;
+const SIXTEENTH = 1;
+const EIGHTH = 2;
+const FOURTH = 4;
 
 // Setting variables
-let BPM = 240;
+let BPM = 124;
 let SongLength = 30;        // in seconds
 let Pages = [];
 let CURRENT_PAGE = 0;
@@ -31,6 +35,7 @@ let CURRENT_PAGE = 0;
 // Canvas variables
 let canvas;
 let Stage;
+let isNoteDown = false;
 
 let MessageLog;
 
@@ -66,7 +71,7 @@ function init() {
     canvas.width = canvasContainer.clientWidth;
     canvas.height = canvasContainer.height;
     Stage = new createjs.Stage(canvas);
-    
+    Stage.enableMouseOver(5);
 
     // Setup context menu
     $.contextMenu({
@@ -94,17 +99,29 @@ function init() {
     // Add handlers to buttons and user input listeners to UI
     $("#SaveJSON").click(saveJSON);
     $("#LoadJSON").click(function() {
-        document.getElementById("uploadFile").click();
+        document.getElementById("uploadJSONFile").click();
     })
-    $('#fileupload').fileupload({
+    $("#LoadMIDI").click(function(){
+        document.getElementById("uploadMIDIFile").click();
+    })
+    $('#fileuploadJSON').fileupload({
         dataType: 'json',
         maxChunkSize: MAX_FILE_SIZE * 1000000, // 10 MB
-        done: loadJSON
-    })
+        done: function(e, data) {
+            loadJSON(e, data)
+        }
+    });
+    $('#fileuploadMIDI').fileupload({
+        dataType: 'json',
+        maxChunkSize: MAX_FILE_SIZE * 1000000, // 10 MB
+        done: function(e, data) {
+            loadMIDI(e, data);
+        }
+    });
     $('input').keypress(function (e) {
         // If 'Enter' key is pressed
         if (e.which == 13) {
-          updateParams();
+          updateParams(true);
           return false;
         }
     });
@@ -115,33 +132,35 @@ function init() {
     Log(LOG_LOG, "Editor Initialized!");
 }
 
-function updateParams() {
+function updateParams(shouldReadInput) {
     Log(LOG_LOG, "Updating Editor parameters");
-    // Update internal variables with newly inputted values
-    BPM = parseInt($("#input_BPMCount").val());
-    SongLength = parseInt($("#input_LengthPerPage").val());
+    if (shouldReadInput) {
+        // Update internal variables with newly inputted values
+        BPM = parseInt($("#input_BPMCount").val());
+        SongLength = parseInt($("#input_LengthPerPage").val());
+    }
 
     if (BPM > MAX_BPM) {
         Log(LOG_WARNING, `Input BPM (${BPM}) exceeds maximum BPM (${MAX_BPM})`);
         BPM = MAX_BPM;
-        $("#input_BPMCount").val(BPM);
     }
     else if (BPM <= 0) {
         Log(LOG_ERROR, `BPM must be greater than 0. Setting to default value.`);
         BPM = 240;
-        $("#input_BPMCount").val(BPM);
     }
+
+    $("#input_BPMCount").val(BPM);
 
     if (SongLength > MAX_SONG_LEN) {
         Log(LOG_WARNING, `Length (${SongLength  }) exceeds maximum length (${MAX_SONG_LEN})`);
         SongLength = MAX_SONG_LEN;
-        $("#input_LengthPerPage").val(SongLength);
     }
     else if (SongLength <= 0) {
         Log(LOG_ERROR, `Length must be greater than 0. Setting to default value.`);
         SongLength = 30;
-        $("#input_LengthPerPage").val(SongLength);
     }
+
+    $("#input_LengthPerPage").val(SongLength);
 
     NOTES_PER_PAGE = (BPM / 60) * (SongLength) * 4;
     NOTES_PER_PAGE = Math.ceil(NOTES_PER_PAGE);
@@ -156,7 +175,7 @@ function updateParams() {
 }
 
 function updateUI() {
-    var lenInSeconds = Pages.length * SongLength;
+    var lenInSeconds = Math.round(Pages.length * SongLength * 100) / 100;
     var lenInMinutes = Math.floor(lenInSeconds / 60);
     lenInSeconds = (lenInSeconds % 60).toString().padStart(2, "0");
     $("#prop_SongLength").text(lenInMinutes + ":" + lenInSeconds);
@@ -181,14 +200,13 @@ function populate() {
         segment.y = (timeSegm * ((NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1))) + timeSegm * 5);
         if (segment.y + ((NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1))) > canvas.height) {
             canvas.height = segment.y + (NOTE_HEIGHT) * NOTES_PER_MEASURE + (5 * (NOTES_PER_MEASURE - 1));
-            console.log(canvas.height);
         }
         Stage.addChild(segment);
         segment.snapToPixel = true;
     }
     // Render time labels & notes
     for (var row = 0; row < NOTES_PER_PAGE; row++) {
-        var lenInSeconds = spb / 4 * ((NOTES_PER_PAGE) - row) + (CURRENT_PAGE * SongLength);
+        var lenInSeconds = (spb / 4) * ((NOTES_PER_PAGE) - row) + (CURRENT_PAGE * SongLength);
         var lenInMilliseconds = ((lenInSeconds % 1) * 1000);
         var lenInMinutes = Math.floor(lenInSeconds / 60);
         lenInSeconds = Math.floor(lenInSeconds % 60).toString().padStart(2, "0");
@@ -202,13 +220,13 @@ function populate() {
         }
         var time = new createjs.Text(timeLabel, textStyle, textColor);
         time.x = 43;
-        time.y = (row * NOTE_HEIGHT + row * 5);
+        time.y = (row * NOTE_HEIGHT + row * 5) - 5;
         time.textAlign = "right";
         Stage.addChild(time);
         time.snapToPixel = true;
 
         if (Notes[row] == undefined) {
-            Notes[row] = [false, false, false, false, false];
+            Notes[row] = [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY];
         }
 
         for (var col = 0; col < 5; col++) {
@@ -216,15 +234,21 @@ function populate() {
             var color = DEFAULT_NOTE_COLOR;
             if (Notes[row][col]) {
                 color = SELECTED_NOTE_COLOR;
+                selectable.scaleY = Notes[row][col] + ((Notes[row][col] - 1) * (5 / NOTE_HEIGHT));
             }
             selectable.graphics.beginFill(color).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
             selectable.x = (col * NOTE_WIDTH + col * 5) + 75;
             selectable.y = (row * NOTE_HEIGHT + row * 5);
-            selectable.coord = { col: col, row: row };
+            selectable.coord = { col: col, row: row, len: 1 };
             selectable.selected = false;
             selectable.addEventListener("click", handleNoteClick);
+            selectable.addEventListener("mousedown", handleNoteDown);
+            selectable.addEventListener("pressmove", handleNoteMove);
+            selectable.addEventListener("pressup", handleNoteUp);
             Stage.addChild(selectable);
             selectable.snapToPixel = true;
+            selectable.regY = NOTE_HEIGHT;
+            selectable.y = selectable.y + NOTE_HEIGHT;
         }
     }
     Stage.update();
@@ -310,23 +334,93 @@ function handlePageContextClick(options, key, root) {
     }
 }
 
-// When user clicks on a note box in the editor
-function handleNoteClick(e) {
+const mouseDelta = { x: 0, y: 0 };
+function handleNoteDown (e) {
+    currentScale = e.target.scaleY;
+    e.bubbles = false;
+    isNoteDown = true;
     var coord = e.target.coord;
     var x = e.target.x;
     var y = e.target.y;
+    
     var Notes = Pages[CURRENT_PAGE];
     if (e.target.selected) {
         e.target.selected = false;
         e.target.graphics.clear().beginFill(DEFAULT_NOTE_COLOR).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
-        Notes[coord.row][coord.col] = false;
+        Notes[coord.row][coord.col] = EMPTY;
+        e.target.scaleY = 1;
     }
     else {
         e.target.selected = true;
         e.target.graphics.clear().beginFill(SELECTED_NOTE_COLOR).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
-        Notes[coord.row][coord.col] = true;
+        Notes[coord.row][coord.col] = SIXTEENTH;
     }
     Stage.update();
+    mouseDelta.x = x;
+    mouseDelta.y = y;
+}
+
+function handleNoteMove (e) {
+    if (isNoteDown) {
+    
+        e.bubbles = false;
+        var source_x = e.target.x;
+        var source_y = e.target.y;
+
+        var curr_x = e.stageX;
+        var curr_y = e.stageY;
+
+        var deltaX = source_x - curr_x;
+        var deltaY = source_y - curr_y;
+        
+        mouseDelta.x -= curr_x;
+        mouseDelta.y -= curr_y;
+
+        var coord = e.target.coord;
+        var Notes = Pages[CURRENT_PAGE];
+
+        let currentScale = Math.round(e.target.scaleY);
+        if (currentScale < 4 && (deltaY  - (currentScale * 5)) > NOTE_HEIGHT) {
+            currentScale = Math.round((deltaY  - (currentScale * 5)) / NOTE_HEIGHT);
+            if (currentScale > 4 || currentScale == 3) currentScale = 4;
+            let offset = (currentScale - 1) * (5 / NOTE_HEIGHT);
+            e.target.scaleY = currentScale + offset;
+            e.target.coord.len = currentScale;
+            let objs = Stage.getObjectsUnderPoint(curr_x, curr_y, 0);
+            for (let idx in objs) {
+                if (objs[idx] != e.target) {
+                    var c = objs[idx].coord;
+                    objs[idx].selected = false;
+                    objs[idx].scaleY = 1;
+                    objs[idx].graphics.clear().beginFill(DEFAULT_NOTE_COLOR).drawRect(0, 0, NOTE_WIDTH, NOTE_HEIGHT);
+                    objs[idx].coord.len = 1;
+                    Notes[c.row][c.col] = EMPTY;
+                }
+            }
+            Notes[coord.row][coord.col] = currentScale;
+        }
+        else if (mouseDelta.y < 0) {
+            currentScale = Math.round(deltaY / NOTE_HEIGHT);
+            if (currentScale > 4) currentScale = 4;
+            if (currentScale == 3) currentScale = 2;
+            if (currentScale == 0) currentScale = 1;
+            let offset = (currentScale - 1) * (5 / NOTE_HEIGHT);
+            e.target.coord.len = currentScale;
+            e.target.scaleY = currentScale + offset;
+            Notes[coord.row][coord.col] = currentScale;
+        }
+        Stage.update();
+    }
+}
+
+function handleNoteUp (e) {
+    e.bubbles = false;
+    isNoteDown = false;
+}
+
+// When user clicks on a note box in the editor
+function handleNoteClick (e) {
+    
 }
 
 // When user clicks on "Save JSON" button
@@ -370,18 +464,39 @@ function saveJSON(e) {
     };
 }
 
+function loadMIDI(e, data) {
+    const noteData = JSON.parse(data.jqXHR.responseText);
+    console.log(noteData);
+    populateFromMIDI(noteData);
+}
+
 // When user clicks on "Load JSON" button
 function loadJSON(e, data) {
     const noteData = JSON.parse(data.jqXHR.responseText);
+    console.log(noteData)
     // Data will come in one giant array. We need to split it up into pages
     // Clear existing page data
     var currentPage = 0;
     Pages = [];
     Pages[currentPage] = [];
+    NOTES_PER_PAGE = Math.min(noteData.length, NOTES_PER_PAGE);
     $(".pageButton").each(function (i, el) {
         if ($(el).attr("id") == "AddPage") return;
         $(el).remove();
     })
+    var bps = BPM / 60; // Beats per second
+    var spb = 1 / bps;  // Seconds per beat
+    var sps = spb / 4;  // Seconds per sixteenth note
+    var len = noteData.length * sps;
+    if (len < MAX_SONG_LEN) {
+        SongLength = len;
+    }
+    else {
+        SongLength = MAX_SONG_LEN;
+    }
+
+    NOTES_PER_PAGE = (BPM / 60) * (SongLength) * 4;
+
     // Running data set backwards so first notes are last
     for (var setIdx = noteData.length - 1; setIdx >= 0; setIdx--) {
         currentPage = Math.floor((setIdx) / NOTES_PER_PAGE);
@@ -390,8 +505,9 @@ function loadJSON(e, data) {
         }
         Pages[currentPage].push(noteData[setIdx]);
     }
+
     CURRENT_PAGE = 0;
-    if (Pages.length > 1) {
+    if (Pages.length >= 1) {
         var counter = Pages.length;
         while (counter > 0) {
             var button = $("<div></div>").addClass("pageButton");
@@ -407,6 +523,76 @@ function loadJSON(e, data) {
 
     populate();
     updateUI();
+    Log(LOG_SUCCESS, `Load complete!`);
+}
+
+function populateFromMIDI(midi) {
+    //BPM = midi.header.bpm;
+    const tracks = midi.tracks;
+    var bps = BPM / 60; // Beats per second
+    var spb = 1 / bps;  // Seconds per beat
+    var sps = spb / 4;  // Seconds per sixteenth note
+    var len = midi.duration;
+    var pageLen = Math.round(len / sps);
+    if (len < MAX_SONG_LEN) {
+        SongLength = len;
+    }
+    else {
+        SongLength = MAX_SONG_LEN;
+    }
+
+    NOTES_PER_PAGE = (BPM / 60) * (SongLength) * 4;
+
+    var noteData = [];
+    for (let trackIdx in midi.tracks) {
+        let track = midi.tracks[trackIdx];
+        if (track.duration == 0) continue;
+        for (let noteIdx in track.notes) {
+            let note = track.notes[noteIdx];
+            let noteLen = Math.round(note.duration / sps);
+            let noteStart = Math.round(note.time / sps);
+            if (noteData[noteStart] === undefined) {
+                noteData[noteStart] = [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY];
+            }
+            noteData[noteStart][trackIdx - 1] = noteLen;
+            //console.log(`Track ${trackIdx}: note ${noteIdx} len ${noteLen}`);
+        }
+    }
+    
+    var currentPage = 0;
+    Pages = [];
+    Pages[currentPage] = [];
+    $(".pageButton").each(function (i, el) {
+        if ($(el).attr("id") == "AddPage") return;
+        $(el).remove();
+    })
+    // Running data set backwards so first notes are last
+    for (var setIdx = noteData.length - 1; setIdx >= 0; setIdx--) {
+        currentPage = Math.floor((setIdx) / NOTES_PER_PAGE);
+        if (Pages[currentPage] === undefined) { 
+            Pages[currentPage] = [];
+        }
+        if (noteData[setIdx] === undefined) {
+            noteData[setIdx] = [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY];
+        }
+        Pages[currentPage].push(noteData[setIdx]);
+    }
+    CURRENT_PAGE = 0;
+    if (Pages.length >= 1) {
+        var counter = Pages.length;
+        while (counter > 0) {
+            var button = $("<div></div>").addClass("pageButton");
+            button.text((Pages.length - counter + 1).toString());
+            button.insertBefore("#AddPage");
+            button.on("click", handlePageClick);
+            counter--;
+        }
+    }
+    $(".pageButton.active").removeClass("active");
+    var el = $(".pageButton").get(CURRENT_PAGE);
+    $(el).addClass("active");
+
+    updateParams(false);
     Log(LOG_SUCCESS, `Load complete!`);
 }
 

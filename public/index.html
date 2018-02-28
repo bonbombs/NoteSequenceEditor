@@ -24,12 +24,16 @@
                 <div class="row">
                     <span id="prop_Message"></span>
                 </div>
+                <form id="fileuploadMIDI" action="/uploadMIDI" method="POST">
+                    <input type="file" id="uploadMIDIFile" accept=".mid,.midi" name="midi">
+                </form>
+                <form id="fileuploadJSON" action="/upload" method="POST">
+                    <input type="file" id="uploadJSONFile" accept=".json" name="noteSequence">
+                </form>
                 <div class="row">
-                    <form id="fileupload" action="/upload" method="POST">
-                        <input type="file" id="uploadFile" accept=".json" name="noteSequence">
-                    </form>
-                    <div class="button col-sm" id="LoadJSON">Load JSON</div>
-                    <div class="button col-sm" id="SaveJSON">Save JSON</div>
+                    <div class="button col-11" id="LoadMIDI">Load MIDI</div>
+                    <div class="button col-md" id="LoadJSON">Load JSON</div>
+                    <div class="button col-md" id="SaveJSON">Save JSON</div>
                 </div>
                 <hr/>
                 <h6>Total Song Length: <span id="prop_SongLength">0</span></h6>
@@ -48,7 +52,7 @@
                     <div class="col-8">
                         <div class="input-group editorInput">
                             <span class="input-group-addon">BPM:</span>
-                            <input type="text" class="form-control" id="input_BPMCount">
+                            <input class="form-control" id="input_BPMCount" disabled>
                         </div>
                     </div>
                 </div>
